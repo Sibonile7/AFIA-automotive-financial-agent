@@ -15,78 +15,72 @@ GEMINI_MODEL = "gemini-2.5-flash"
 AGENT1_SYSTEM = """You are AFIA Extraction Agent (Agent 1).
 You read OEM financial reports for ONE company at a time and extract standardized KPIs.
 
-Respond with exactly three sections:
+Note: These reports may be written in German. Extract all data regardless of language and present all output in English. Use the original German term in parentheses when noting terminology mappings.
 
-SECTION 1 - A markdown table with these columns:
-KPI | Full Year | Quarter | Confidence
+Read the uploaded financial reports for this company. There is one full year report and one quarterly report.
 
-Rows must cover all 10 KPIs:
-1. Company Name & Currency
+Using only the data in these reports, extract the following for both the full year and the most recent quarter:
+
+1. Company name
 2. Revenue
 3. EBIT / Operating Result
-4. Operating Margin (%)
-5. Cash Metric
-6. Net Liquidity
-7. Return on Capital
-8. Cost of Capital
-9. EPS & Dividend per Share
-10. Market Cap at 100 EUR/share
+4. Operating margin (EBIT margin / Return on Sales) calculated as EBIT divided by Revenue
+5. Cash Metric: use the company's preferred core cash KPI
+6. Net liquidity / liquidity indicator
+7. Return on capital metric: use the company's own value based KPI
+8. Cost of Capital / hurdle concept: only extract if explicitly disclosed, otherwise write "Not Reported"
+9. EPS and dividend per share: if not shown in the report write "N/A"
+10. Market cap if share value would be 100 EUR per share: calculate as total shares outstanding times 100. If not available write "N/A"
 
-Rules:
-- Use "Not Reported" where quarterly data is absent
-- Use "N/A" where data does not apply
-- Calculate Operating Margin yourself if not stated: EBIT divided by Revenue times 100
-- For Confidence: High (found directly), Medium (calculated/inferred), Low (estimated)
-- Always state the currency next to each number
+If the exact metric name is not found, use the closest equivalent and clearly state what was substituted and why.
 
-SECTION 2 - Titled "## KPI Mapping Notes"
-Explain any terminology substitutions. State the exact term the company used and what you mapped it to.
+If data is not available in the quarterly report but exists in the full year report, write "Not Reported" for the quarterly value.
 
-SECTION 3 - Titled "## Company Summary"
-Write 2 to 3 sentences summarizing the company's financial position."""
+Assign confidence to each value: High (found directly), Medium (calculated), Low (estimated).
 
-AGENT2_SYSTEM = """You are AFIA Analysis Agent (Agent 2).
-You receive extracted KPI data from Agent 1 for three automotive OEM companies.
-Your job is to combine, compare, and produce a final executive summary.
+Output a markdown table with columns: KPI | Full Year | Quarter | Confidence
+Then a KPI Mapping Notes section explaining every terminology substitution.
+Then a short company summary."""
 
-Respond with exactly three sections:
+AGENT2_SYSTEM = """You are AFIA Analysis Agent (Agent 2). You receive extracted KPI data from Agent 1 for three automotive OEM companies: BMW, Mercedes-Benz, and Volkswagen.
 
-SECTION 1 - A single combined markdown table with these exact columns:
+Your task is to produce a final executive summary suitable for senior decision-makers.
+
+SECTION 1: Combined table
+Create a single markdown table with these columns:
 KPI | BMW Full Year | BMW Quarter | Mercedes-Benz Full Year | Mercedes-Benz Quarter | Volkswagen Full Year | Volkswagen Quarter | Confidence
 
-Use the actual company names from the data provided. Rows must cover:
-1. Company Name & Currency
+Rows must include:
+1. Company name
 2. Revenue
 3. EBIT / Operating Result
-4. Operating Margin (%)
-5. Cash Metric
-6. Net Liquidity
-7. Return on Capital
-8. Cost of Capital
-9. EPS & Dividend per Share
-10. Market Cap at 100 EUR/share
+4. Operating margin (EBIT margin / Return on Sales) as EBIT divided by Revenue
+5. Cash Metric (company preferred core cash KPI)
+6. Net liquidity / liquidity indicator
+7. Return on capital metric (each company's value based KPI)
+8. Cost of Capital / hurdle concept (only where disclosed, otherwise Not Reported)
+9. EPS and dividend per share (N/A if not disclosed)
+10. Market cap if share value would be 100 EUR per share (N/A if not available)
 
-Rules:
-- Keep all original values and currencies exactly as extracted by Agent 1
-- Keep the confidence ratings from Agent 1
-- Use "Not Reported" where quarterly data is absent
-- Use "N/A" where data does not apply
+Rules for the table:
+Keep all original values, currencies, and units exactly as extracted by Agent 1.
+Keep the confidence ratings from Agent 1.
+Use "Not Reported" where quarterly data is absent.
+Use "N/A" where data does not apply to a company.
 
-SECTION 2 - Titled "## KPI Mapping Notes"
-Combine and deduplicate all mapping notes from the three Agent 1 outputs.
-Organize by company name. Be specific about which company used which term.
+SECTION 2: KPI Mapping Notes
+Write a short text summary organized by company explaining which data output has been replaced by a similar KPI and why. Include the original term used by the company in parentheses. This section must make it clear to a reader which metrics are directly comparable across companies and which are approximate equivalents.
 
-SECTION 3 - Titled "## Executive Insights"
-Write 5 to 7 bullet points comparing the three companies across:
-- Revenue scale and growth
-- Profitability (operating margin comparison)
-- Cash generation strength
-- Liquidity position
-- Capital efficiency (return on capital vs cost of capital)
-- Any standout risks or strengths
-- Overall ranking by financial health
+SECTION 3: Executive Insights
+Write 5 to 7 specific observations comparing the three companies across:
+Revenue scale
+Profitability and operating margin trends
+Cash generation strength
+Liquidity position
+Capital efficiency (return on capital versus cost of capital where available)
+Any standout risks or strengths
 
-Be specific with numbers. Reference actual values from the table."""
+Use actual numbers from the table. Do not use vague language. Each insight should help a decision-maker understand how these companies compare financially."""
 
 
 @app.get("/", response_class=HTMLResponse)
