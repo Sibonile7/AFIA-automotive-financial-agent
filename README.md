@@ -1,62 +1,161 @@
 # AFIA — Automotive Financial Intelligence Agent
 
-Built by Sibonile Mthunzi for the Magna Global AI Internship assignment.
+A multi-agent system that reads automotive OEM financial reports (annual and quarterly), extracts key performance indicators, maps inconsistent terminology across companies, and produces an executive summary table with cross-company analysis.
 
-## Setup (takes about 2 minutes)
+Built by **Sibonile Mthunzi** for the Magna Global AI Internship assignment (R00242813).
 
-### 1. Install dependencies
+## What it does
 
-Open your terminal, go into this folder, and run:
+AFIA processes PDF financial reports from three automotive OEMs (BMW, Mercedes-Benz, Volkswagen) and extracts 10 standardized KPIs:
+
+- Company name
+- Revenue
+- EBIT / Operating Result
+- Operating margin (EBIT divided by Revenue)
+- Cash Metric (company preferred core cash KPI)
+- Net liquidity / liquidity indicator
+- Return on capital metric (each company's value based KPI)
+- Cost of Capital / hurdle concept (only where disclosed)
+- EPS and dividend per share
+- Market cap if share value would be 100 EUR per share
+
+The reports use different languages (German and English) and different terminology for the same financial concepts. AFIA handles this by mapping equivalent metrics and clearly documenting every substitution.
+
+## Multi-agent architecture
+
+The system uses two agents in a pipeline:
 
 ```
+PDF reports (2 per company)
+        |
+        v
+  Agent 1: Extraction Agent (runs 3 times, once per company)
+        |
+        v
+  Structured KPI data x3
+        |
+        v
+  Agent 2: Analysis Agent (runs once across all 3 companies)
+        |
+        v
+  Final executive summary table + KPI mapping notes + insights
+```
+
+**Agent 1 (Extraction)** reads one company's annual and quarterly report. It identifies the correct financial figures, maps non-standard terminology to the requested KPI names, and assigns a confidence level (High, Medium, Low) to each data point.
+
+**Agent 2 (Analysis)** takes the combined output from all three Agent 1 runs. It merges the data into a single comparison table, consolidates the KPI mapping notes by company, and writes 5 to 7 executive insights comparing profitability, cash generation, liquidity, and capital efficiency across all three OEMs.
+
+## Why two agents instead of one
+
+Automotive annual reports are large PDF documents (often 100+ pages). Processing all six reports in a single request would exceed token limits and reduce extraction accuracy. By splitting extraction and analysis into separate agents:
+
+- Each extraction run focuses deeply on one company
+- Confidence scoring is more accurate with smaller context
+- The analysis agent works with clean, structured data rather than raw PDFs
+- The pipeline is easier to debug when a value looks wrong
+
+## Tech stack
+
+- **Python 3.12** with FastAPI for the web server
+- **Gemini 2.5 Flash** via Google Generative AI API for document analysis
+- **Plain HTML, CSS, and JavaScript** for the frontend (no frameworks)
+- PDFs are sent as base64-encoded documents directly to the API
+
+## Setup
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/Sibonile7/AFIA-automotive-financial-agent.git
+cd AFIA-automotive-financial-agent
+```
+
+### 2. Install dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. Add your API key
+### 3. Add your API key
 
-Copy the example env file:
-
-```
+```bash
 cp .env.example .env
 ```
 
-Open `.env` and replace `your_api_key_here` with your actual Anthropic API key.
-You can get one at https://console.anthropic.com
-
-### 3. Start the app
+Open `.env` and add your Gemini API key:
 
 ```
+GEMINI_API_KEY=your_key_here
+```
+
+Get a free key at https://aistudio.google.com/apikey
+
+### 4. Create the static folder
+
+```bash
+mkdir static
+```
+
+### 5. Run the app
+
+```bash
 python start.py
 ```
 
-Then open your browser and go to:
+Open your browser at http://localhost:8001
+
+## How to use
+
+1. Go to the **Extract** tab
+2. Upload 2 PDFs for one company (annual report + quarterly report)
+3. Click **Run Agent 1**
+4. Click **Save to Agent 2 input**
+5. Repeat steps 2 to 4 for the other two companies
+6. Go to the **Analyze** tab
+7. Click **Run Agent 2**
+8. The final executive summary table appears with KPI mapping notes and cross-company insights
+
+## Project structure
 
 ```
-http://localhost:8000
+afia/
+  app.py              # FastAPI backend with Agent 1 and Agent 2 endpoints
+  start.py            # Server startup script (loads .env)
+  requirements.txt    # Python dependencies
+  .env.example        # Template for API key
+  static/             # Static assets folder
+  templates/
+    index.html        # Frontend with all 4 tabs (Extract, Analyze, Architecture, Agent prompts)
 ```
 
-## How to use it
+## Confidence scoring
 
-1. Upload up to 6 PDF files (annual and quarterly reports for up to 3 OEM companies)
-2. The agent instructions are already filled in. You can edit them if you want.
-3. Click Run agent
-4. The app extracts KPIs, maps terminology across companies, scores confidence, and produces an executive summary table
-5. Use the Copy button to copy the full output for your submission
+Every extracted data point is tagged with a confidence level:
 
-## What the agent produces
+- **High** means the value was found directly in the report
+- **Medium** means the value was calculated or inferred (for example, operating margin computed from EBIT and revenue)
+- **Low** means the value was estimated from partial data
 
-- A structured table with full year and quarterly data for all 3 companies
-- A KPI Mapping Notes section explaining any terminology substitutions
-- An Executive Insights section with 4 to 5 comparative bullet points
-- A Confidence column showing High, Medium, or Low for each data point
+This prevents decision-makers from treating uncertain figures as confirmed facts.
 
-## Agent architecture
+## KPI terminology mapping
 
-PDF reports → Document reading → KPI extraction → KPI mapping → Validation → Executive summary
+Automotive companies use different terms for the same financial concepts. Examples from this project:
 
-## Built with
+| Requested KPI | BMW uses | Mercedes-Benz uses | Volkswagen uses |
+|---|---|---|---|
+| Revenue | Revenues | Revenue | Umsatzerlöse (Sales Revenue) |
+| EBIT | EBIT | EBIT | Operatives Ergebnis (Operating Result) |
+| Cash Metric | Automotive Free Cash Flow | Free Cash Flow Industrial | Netto-Cashflow Automobile |
+| Return on Capital | RoCE (Automotive) | ROCE | RoI (Automotive) |
 
-- Python 3.12
-- FastAPI for the web server
-- Anthropic Claude claude-opus-4-5 for document analysis
-- Plain HTML and JavaScript for the frontend
+The agent documents every substitution so the reader knows exactly which metrics are directly comparable and which are approximate equivalents.
+
+## Author
+
+**Sibonile Mthunzi**
+M.Eng Artificial Intelligence, Technische Hochschule Deggendorf
+
+- Portfolio: [sibonilemthunzi.com](https://sibonilemthunzi.com)
+- GitHub: [github.com/Sibonile7](https://github.com/Sibonile7)
+- Email: bonniemthunzi@gmail.com
