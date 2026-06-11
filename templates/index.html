@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AFIA — Automotive Financial Intelligence Agent</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f9f9f8; --surface: #ffffff; --border: #e4e4e0; --border-strong: #c8c8c4;
+    --text: #1a1a18; --text-muted: #6b6b68; --text-faint: #a0a09c;
+    --blue-bg: #eff6ff; --blue-text: #1d4ed8;
+    --green-bg: #f0fdf4; --green-text: #15803d;
+    --amber-bg: #fffbeb; --amber-text: #b45309;
+    --red-bg: #fef2f2; --red-text: #b91c1c;
+    --purple-bg: #f5f3ff; --purple-text: #6d28d9;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; }
+  .layout { max-width: 1060px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  header { padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+  .header-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .logo-icon { width: 32px; height: 32px; background: var(--text); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; }
+  h1 { font-size: 20px; font-weight: 600; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: var(--blue-bg); color: var(--blue-text); }
+  .subtitle { font-size: 13px; color: var(--text-muted); }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 1.75rem; border-bottom: 1px solid var(--border); }
+  .tab { padding: 8px 16px; font-size: 13px; font-weight: 500; color: var(--text-muted); background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--text); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  .agent-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; margin-right: 6px; vertical-align: middle; }
+  .agent-badge.a1 { background: var(--blue-bg); color: var(--blue-text); }
+  .agent-badge.a2 { background: var(--purple-bg); color: var(--purple-text); }
+
+  .step-label { font-size: 11px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+
+  .upload-zone { border: 2px dashed var(--border-strong); border-radius: var(--radius); padding: 2.5rem 2rem; text-align: center; background: var(--surface); cursor: pointer; transition: all 0.15s; margin-bottom: 1rem; }
+  .upload-zone:hover, .upload-zone.drag-over { border-color: var(--blue-text); background: var(--blue-bg); }
+
+  .file-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 6px; font-size: 13px; }
+  .file-name { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-size { color: var(--text-faint); font-size: 12px; }
+  .file-remove { color: var(--text-faint); cursor: pointer; font-size: 18px; }
+  .file-remove:hover { color: var(--red-text); }
+
+  textarea { width: 100%; min-height: 130px; padding: 12px 14px; font-size: 13px; font-family: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); resize: vertical; line-height: 1.65; outline: none; margin-bottom: 1rem; }
+  textarea:focus { border-color: var(--border-strong); }
+
+  .btn { width: 100%; padding: 12px; font-size: 14px; font-weight: 600; color: white; border: none; border-radius: var(--radius); cursor: pointer; transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-dark { background: var(--text); }
+  .btn-purple { background: var(--purple-text); }
+
+  .status { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-top: 1rem; background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
+  .status.running { background: var(--blue-bg); color: var(--blue-text); border-color: transparent; }
+  .status.done { background: var(--green-bg); color: var(--green-text); border-color: transparent; }
+  .status.error { background: var(--red-bg); color: var(--red-text); border-color: transparent; }
+
+  .spinner { width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .results { margin-top: 2rem; }
+  .results-title { font-size: 16px; font-weight: 600; margin-bottom: 1.25rem; }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 1.25rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: var(--bg); font-weight: 600; font-size: 11px; color: var(--text-muted); padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg); }
+  .kpi-label { font-weight: 600; font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+  .conf-high { color: var(--green-text); font-weight: 600; }
+  .conf-med { color: var(--amber-text); font-weight: 600; }
+  .conf-low { color: var(--red-text); font-weight: 600; }
+  .na-val { color: var(--text-faint); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.25rem; }
+  .card h3 { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+  .card-line { font-size: 13px; color: var(--text-muted); line-height: 1.7; padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .card-line:last-child { border-bottom: none; }
+
+  .raw-box { font-family: "SF Mono", "Fira Code", monospace; font-size: 12px; color: var(--text-muted); line-height: 1.8; white-space: pre-wrap; background: var(--bg); border-radius: var(--radius-sm); padding: 1rem; max-height: 400px; overflow-y: auto; }
+
+  .copy-btn { padding: 8px 16px; font-size: 13px; border-radius: var(--radius-sm); cursor: pointer; background: var(--surface); color: var(--text); border: 1px solid var(--border); margin-right: 8px; }
+  .copy-btn:hover { background: var(--bg); }
+
+  .output-slot { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: 10px; }
+  .output-slot-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .output-slot-title { font-size: 13px; font-weight: 600; }
+  .output-slot-status { font-size: 11px; padding: 2px 8px; border-radius: 20px; }
+  .output-slot-status.empty { background: var(--bg); color: var(--text-faint); }
+  .output-slot-status.filled { background: var(--green-bg); color: var(--green-text); }
+  .output-preview { font-size: 12px; color: var(--text-faint); max-height: 60px; overflow: hidden; white-space: pre-wrap; }
+
+  .arch-flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 1.5rem; padding: 1rem; background: var(--bg); border-radius: var(--radius); }
+  .arch-node { padding: 5px 12px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .arch-node.a1 { border-color: var(--blue-text); color: var(--blue-text); }
+  .arch-node.a2 { border-color: var(--purple-text); color: var(--purple-text); }
+  .arch-arrow { color: var(--text-faint); font-size: 14px; }
+  .arch-step { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 10px; }
+  .arch-step-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .arch-step-desc { font-size: 12px; color: var(--text-muted); line-height: 1.65; }
+
+  .meta-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.25rem; font-size: 13px; color: var(--text-muted); line-height: 1.8; }
+  .meta-card strong { color: var(--text); }
+  .prompt-display { background: var(--bg); border-radius: var(--radius); padding: 1.25rem; font-size: 13px; color: var(--text-muted); line-height: 1.8; white-space: pre-wrap; margin-bottom: 1.25rem; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<header>
+  <div class="header-row">
+    <div class="logo-icon">A</div>
+    <h1>Automotive Financial Intelligence Agent</h1>
+    <span class="badge">AFIA</span>
+  </div>
+  <p class="subtitle">Multi-agent system: Agent 1 extracts KPIs per company, Agent 2 combines and analyzes across all three.</p>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('agent1',this)"><span class="agent-badge a1">A1</span>Extract</button>
+  <button class="tab" onclick="switchTab('agent2',this)"><span class="agent-badge a2">A2</span>Analyze</button>
+  <button class="tab" onclick="switchTab('arch',this)">Architecture</button>
+  <button class="tab" onclick="switchTab('prompt',this)">Agent prompts</button>
+</div>
+
+<!-- AGENT 1 TAB -->
+<div id="pane-agent1" class="tab-pane active">
+  <div class="step-label"><span class="agent-badge a1">Agent 1</span> Upload one company's reports (2 PDFs: annual + quarterly)</div>
+  <div class="upload-zone" id="dropZone"
+    onclick="document.getElementById('fileInput').click()"
+    ondragover="event.preventDefault();this.classList.add('drag-over')"
+    ondragleave="this.classList.remove('drag-over')"
+    ondrop="handleDrop(event)">
+    <div style="font-size:2rem;margin-bottom:8px;">📄</div>
+    <div style="font-size:14px;font-weight:500;">Click to upload or drag and drop</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Upload 2 PDFs for one company at a time (annual + quarterly report)</div>
+  </div>
+  <input type="file" id="fileInput" accept=".pdf" multiple style="display:none" onchange="handleFiles(this.files)">
+  <div id="fileList" style="margin-bottom:1rem;"></div>
+
+  <textarea id="a1Prompt">Analyze the uploaded financial reports. Extract all 10 KPIs for the full year and the most recent quarter. Map any non-standard terminology to the requested KPI names. Assign confidence levels to each data point. Note any substitutions in the KPI Mapping Notes section.</textarea>
+
+  <button class="btn btn-dark" id="a1Btn" onclick="runAgent1()" disabled>
+    ▶ Run Agent 1 (Extract)
+  </button>
+
+  <div class="status" id="a1Status">
+    <span>📋</span><span id="a1StatusText">Upload 2 PDFs for one company to get started.</span>
+  </div>
+
+  <div class="results" id="a1Results" style="display:none">
+    <div class="results-title">Agent 1 output</div>
+    <div class="table-wrap" id="a1Table"></div>
+    <div class="card" id="a1Mapping" style="display:none"><h3>KPI mapping notes</h3><div id="a1MappingContent"></div></div>
+    <div class="card" id="a1Raw" style="display:none"><h3>Full output</h3><div class="raw-box" id="a1RawContent"></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="copy-btn" onclick="copyText(lastA1Output)">📋 Copy output</button>
+      <button class="copy-btn" onclick="saveToSlot()" style="background:var(--blue-bg);color:var(--blue-text);border-color:var(--blue-text);">💾 Save to Agent 2 input</button>
+    </div>
+  </div>
+</div>
+
+<!-- AGENT 2 TAB -->
+<div id="pane-agent2" class="tab-pane">
+  <div class="step-label"><span class="agent-badge a2">Agent 2</span> Combine and analyze all three companies</div>
+
+  <div id="slots" style="margin-bottom:1.25rem;">
+    <div class="output-slot" id="slot0">
+      <div class="output-slot-header">
+        <span class="output-slot-title">Company 1</span>
+        <span class="output-slot-status empty" id="slot0Status">Empty</span>
+      </div>
+      <div class="output-preview" id="slot0Preview">Run Agent 1 for the first company and click "Save to Agent 2 input"</div>
+    </div>
+    <div class="output-slot" id="slot1">
+      <div class="output-slot-header">
+        <span class="output-slot-title">Company 2</span>
+        <span class="output-slot-status empty" id="slot1Status">Empty</span>
+      </div>
+      <div class="output-preview" id="slot1Preview">Run Agent 1 for the second company and click "Save to Agent 2 input"</div>
+    </div>
+    <div class="output-slot" id="slot2">
+      <div class="output-slot-header">
+        <span class="output-slot-title">Company 3</span>
+        <span class="output-slot-status empty" id="slot2Status">Empty</span>
+      </div>
+      <div class="output-preview" id="slot2Preview">Run Agent 1 for the third company and click "Save to Agent 2 input"</div>
+    </div>
+  </div>
+
+  <div class="step-label">Or paste outputs manually</div>
+  <textarea id="a2Manual" placeholder="Paste all three Agent 1 outputs here if you prefer to input manually..." style="min-height:100px;"></textarea>
+
+  <button class="btn btn-purple" id="a2Btn" onclick="runAgent2()">
+    ▶ Run Agent 2 (Analyze)
+  </button>
+
+  <div class="status" id="a2Status">
+    <span>📋</span><span id="a2StatusText">Save all 3 company outputs from Agent 1 or paste manually, then run.</span>
+  </div>
+
+  <div class="results" id="a2Results" style="display:none">
+    <div class="results-title">Final executive summary</div>
+    <div class="table-wrap" id="a2Table"></div>
+    <div class="card" id="a2Mapping" style="display:none"><h3>KPI mapping notes (all companies)</h3><div id="a2MappingContent"></div></div>
+    <div class="card" id="a2Insights" style="display:none"><h3>Executive insights</h3><div id="a2InsightsContent"></div></div>
+    <div class="card" id="a2Raw" style="display:none"><h3>Full output</h3><div class="raw-box" id="a2RawContent"></div></div>
+    <button class="copy-btn" onclick="copyText(lastA2Output)">📋 Copy full output</button>
+  </div>
+</div>
+
+<!-- ARCHITECTURE TAB -->
+<div id="pane-arch" class="tab-pane">
+  <div class="step-label">Multi-agent architecture</div>
+  <div class="arch-flow">
+    <div class="arch-node">📄 PDF reports</div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node a1">Agent 1: Extract (per company)</div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node">Structured KPI data x3</div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node a2">Agent 2: Analyze (cross-company)</div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node">📊 Executive summary</div>
+  </div>
+
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+    <div>
+      <div class="step-label" style="color:var(--blue-text);">Agent 1 — Extraction Agent</div>
+      <div class="arch-step">
+        <div class="arch-step-title">1. Document reading</div>
+        <div class="arch-step-desc">Identifies company name, reporting period, currency, and report type from the uploaded PDFs.</div>
+      </div>
+      <div class="arch-step">
+        <div class="arch-step-title">2. KPI extraction</div>
+        <div class="arch-step-desc">Extracts all 10 required financial KPIs from each report: Revenue, EBIT, Operating Margin, Cash Metric, Net Liquidity, Return on Capital, Cost of Capital, EPS, Dividend, Market Cap.</div>
+      </div>
+      <div class="arch-step">
+        <div class="arch-step-title">3. KPI mapping</div>
+        <div class="arch-step-desc">Maps company-specific terminology to standardized KPI names. Records each substitution for transparency.</div>
+      </div>
+      <div class="arch-step">
+        <div class="arch-step-title">4. Confidence scoring</div>
+        <div class="arch-step-desc">Tags each data point: High (found directly), Medium (calculated), Low (estimated). Prevents overconfidence in uncertain figures.</div>
+      </div>
+    </div>
+    <div>
+      <div class="step-label" style="color:var(--purple-text);">Agent 2 — Analysis Agent</div>
+      <div class="arch-step">
+        <div class="arch-step-title">1. Data combination</div>
+        <div class="arch-step-desc">Merges all three Agent 1 outputs into a single unified table with 6 data columns (full year + quarter for each company).</div>
+      </div>
+      <div class="arch-step">
+        <div class="arch-step-title">2. Mapping consolidation</div>
+        <div class="arch-step-desc">Deduplicates and organizes all KPI mapping notes by company, creating a single reference for terminology differences.</div>
+      </div>
+      <div class="arch-step">
+        <div class="arch-step-title">3. Cross-company analysis</div>
+        <div class="arch-step-desc">Compares revenue scale, profitability, cash generation, liquidity, and capital efficiency across all three OEMs.</div>
+      </div>
+      <div class="arch-step">
+        <div class="arch-step-title">4. Executive insights</div>
+        <div class="arch-step-desc">Produces 5 to 7 actionable insights with specific numbers, identifying strengths, risks, and an overall financial health ranking.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROMPT TAB -->
+<div id="pane-prompt" class="tab-pane">
+  <div class="meta-card">
+    <strong>Agent name:</strong> AFIA — Automotive Financial Intelligence Agent<br>
+    <strong>Architecture:</strong> Multi-agent pipeline. Agent 1 (Extraction) runs per company. Agent 2 (Analysis) runs once across all three.<br>
+    <strong>Model:</strong> Gemini 2.5 Flash via Google Generative AI API<br>
+    <strong>Input:</strong> Up to 6 PDF files (2 per company) sent as base64-encoded documents<br>
+    <strong>Built by:</strong> Sibonile Mthunzi, M.Eng AI, Technische Hochschule Deggendorf
+  </div>
+  <div class="step-label" style="color:var(--blue-text);">Agent 1 system prompt (Extraction)</div>
+  <div class="prompt-display" id="a1PromptDisplay"></div>
+  <div class="step-label" style="color:var(--purple-text);">Agent 2 system prompt (Analysis)</div>
+  <div class="prompt-display" id="a2PromptDisplay"></div>
+</div>
+
+</div>
+
+<script>
+let files = [];
+let lastA1Output = '';
+let lastA2Output = '';
+let slots = ['', '', ''];
+let currentSlot = 0;
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+  btn.classList.add('active');
+  const pane = document.getElementById('pane-' + name);
+  pane.classList.add('active');
+  pane.style.display = 'block';
+  if (name === 'prompt') {
+    document.getElementById('a1PromptDisplay').textContent = "You are AFIA Extraction Agent (Agent 1).\nYou read OEM financial reports for ONE company at a time and extract standardized KPIs.\n\nRespond with:\n1. A markdown table with columns: KPI | Full Year | Quarter | Confidence\n2. KPI Mapping Notes section\n3. Company Summary section\n\n10 KPIs: Company Name & Currency, Revenue, EBIT, Operating Margin, Cash Metric, Net Liquidity, Return on Capital, Cost of Capital, EPS & Dividend, Market Cap at 100 EUR/share\n\nRules:\n- Not Reported for missing quarterly data\n- N/A where not applicable\n- Calculate Operating Margin if not stated\n- Confidence: High (direct), Medium (calculated), Low (estimated)\n- State currency next to each number";
+    document.getElementById('a2PromptDisplay').textContent = "You are AFIA Analysis Agent (Agent 2).\nYou receive extracted KPI data from Agent 1 for three automotive OEMs.\n\nRespond with:\n1. Combined table: KPI | BMW FY | BMW Q | Mercedes FY | Mercedes Q | VW FY | VW Q | Confidence\n2. KPI Mapping Notes (combined, organized by company)\n3. Executive Insights (5-7 bullets comparing revenue, profitability, cash, liquidity, capital efficiency, risks, overall ranking)\n\nRules:\n- Keep original values and currencies from Agent 1\n- Keep confidence ratings from Agent 1\n- Be specific with numbers in insights";
+  }
+}
+document.querySelectorAll('.tab-pane').forEach(p => { p.style.display = 'none'; });
+document.getElementById('pane-agent1').style.display = 'block';
+
+function handleFiles(list) {
+  for (const f of list) {
+    if (f.type === 'application/pdf' && files.length < 6 && !files.find(x => x.name === f.name)) files.push(f);
+  }
+  renderFiles();
+}
+function handleDrop(e) { e.preventDefault(); document.getElementById('dropZone').classList.remove('drag-over'); handleFiles(e.dataTransfer.files); }
+function removeFile(i) { files.splice(i,1); renderFiles(); }
+function renderFiles() {
+  const list = document.getElementById('fileList');
+  list.innerHTML = '';
+  files.forEach((f,i) => {
+    const d = document.createElement('div'); d.className = 'file-item';
+    d.innerHTML = `<span style="color:var(--text-muted)">📄</span><span class="file-name">${f.name}</span><span class="file-size">${(f.size/1024/1024).toFixed(1)} MB</span><span class="file-remove" onclick="removeFile(${i})">×</span>`;
+    list.appendChild(d);
+  });
+  document.getElementById('a1Btn').disabled = files.length === 0;
+  setStatus('a1', 'idle', files.length > 0 ? `${files.length} file${files.length>1?'s':''} ready.` : 'Upload 2 PDFs for one company to get started.');
+}
+
+function setStatus(agent, type, msg) {
+  const bar = document.getElementById(agent + 'Status');
+  bar.className = 'status ' + (type !== 'idle' ? type : '');
+  bar.innerHTML = type === 'running' ? `<div class="spinner"></div><span>${msg}</span>` : `<span>${type==='done'?'✅':type==='error'?'❌':'📋'}</span><span>${msg}</span>`;
+}
+
+async function runAgent1() {
+  if (!files.length) return;
+  document.getElementById('a1Btn').disabled = true;
+  document.getElementById('a1Results').style.display = 'none';
+  setStatus('a1', 'running', 'Agent 1 is extracting KPIs...');
+
+  const fd = new FormData();
+  files.forEach(f => fd.append('files', f));
+  fd.append('prompt', document.getElementById('a1Prompt').value);
+
+  try {
+    const res = await fetch('/api/extract', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed');
+    lastA1Output = data.output;
+    renderA1Results(data.output);
+    setStatus('a1', 'done', 'Extraction complete. Save the output to Agent 2 or copy it.');
+  } catch(err) {
+    setStatus('a1', 'error', 'Error: ' + err.message);
+  } finally {
+    document.getElementById('a1Btn').disabled = false;
+  }
+}
+
+function renderA1Results(text) {
+  const tw = document.getElementById('a1Table');
+  const tableMatch = text.match(/\|.+\|[\s\S]+?(?=\n##|\n\*\*KPI|\nKPI Mapping|$)/i);
+  if (tableMatch) { tw.innerHTML = parseTable(tableMatch[0]) || `<pre style="padding:1rem;font-size:12px;">${tableMatch[0]}</pre>`; }
+  const mappingMatch = text.match(/##\s*KPI Mapping Notes([\s\S]*?)(?=\n##|$)/i);
+  if (mappingMatch) {
+    document.getElementById('a1MappingContent').innerHTML = mappingMatch[1].split('\n').filter(l=>l.trim()).map(l=>`<div class="card-line">${l.replace(/^[-*•]\s*/,'')}</div>`).join('');
+    document.getElementById('a1Mapping').style.display = 'block';
+  }
+  document.getElementById('a1RawContent').textContent = text;
+  document.getElementById('a1Raw').style.display = 'block';
+  document.getElementById('a1Results').style.display = 'block';
+  document.getElementById('a1Results').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function saveToSlot() {
+  if (!lastA1Output) return;
+  if (currentSlot >= 3) { alert('All 3 slots are filled. Run Agent 2 now.'); return; }
+  slots[currentSlot] = lastA1Output;
+  const preview = lastA1Output.substring(0, 150) + '...';
+  document.getElementById('slot' + currentSlot + 'Preview').textContent = preview;
+  document.getElementById('slot' + currentSlot + 'Status').textContent = 'Saved';
+  document.getElementById('slot' + currentSlot + 'Status').className = 'output-slot-status filled';
+  currentSlot++;
+  files = [];
+  renderFiles();
+  alert(`Saved to Company ${currentSlot}. ${currentSlot < 3 ? 'Now upload the next company.' : 'All 3 done! Switch to the Analyze tab and run Agent 2.'}`);
+}
+
+async function runAgent2() {
+  let combined = document.getElementById('a2Manual').value.trim();
+  if (!combined) {
+    const filled = slots.filter(s => s);
+    if (filled.length === 0) { setStatus('a2', 'error', 'No data. Run Agent 1 for each company first or paste outputs manually.'); return; }
+    combined = filled.map((s,i) => `=== COMPANY ${i+1} ===\n${s}`).join('\n\n');
+  }
+
+  document.getElementById('a2Btn').disabled = true;
+  document.getElementById('a2Results').style.display = 'none';
+  setStatus('a2', 'running', 'Agent 2 is analyzing and comparing all companies...');
+
+  const fd = new FormData();
+  fd.append('prompt', 'Here are the Agent 1 extraction outputs for three automotive OEM companies. Combine them into a single executive summary table and provide cross-company analysis.\n\n' + combined);
+
+  try {
+    const res = await fetch('/api/analyze', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed');
+    lastA2Output = data.output;
+    renderA2Results(data.output);
+    setStatus('a2', 'done', 'Analysis complete. Executive summary is ready.');
+  } catch(err) {
+    setStatus('a2', 'error', 'Error: ' + err.message);
+  } finally {
+    document.getElementById('a2Btn').disabled = false;
+  }
+}
+
+function renderA2Results(text) {
+  const tw = document.getElementById('a2Table');
+  const tableMatch = text.match(/\|.+\|[\s\S]+?(?=\n##|\n\*\*KPI|\nKPI Mapping|$)/i);
+  if (tableMatch) { tw.innerHTML = parseTable(tableMatch[0]) || `<pre style="padding:1rem;font-size:12px;">${tableMatch[0]}</pre>`; }
+
+  const mappingMatch = text.match(/##\s*KPI Mapping Notes([\s\S]*?)(?=\n##|$)/i);
+  if (mappingMatch) {
+    document.getElementById('a2MappingContent').innerHTML = mappingMatch[1].split('\n').filter(l=>l.trim()).map(l=>`<div class="card-line">${l.replace(/^[-*•]\s*/,'')}</div>`).join('');
+    document.getElementById('a2Mapping').style.display = 'block';
+  }
+
+  const insightsMatch = text.match(/##\s*Executive Insights([\s\S]*)/i);
+  if (insightsMatch) {
+    document.getElementById('a2InsightsContent').innerHTML = insightsMatch[1].split('\n').filter(l=>l.trim()).map(l=>`<div class="card-line">${l.replace(/^[-*•\d.]\s*/,'')}</div>`).join('');
+    document.getElementById('a2Insights').style.display = 'block';
+  }
+
+  document.getElementById('a2RawContent').textContent = text;
+  document.getElementById('a2Raw').style.display = 'block';
+  document.getElementById('a2Results').style.display = 'block';
+  document.getElementById('a2Results').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function parseTable(md) {
+  const rows = md.trim().split('\n').filter(r => r.includes('|'));
+  if (rows.length < 2) return null;
+  const headers = rows[0].split('|').map(h=>h.trim()).filter(Boolean);
+  const body = rows.slice(2).filter(r => !/^[\s|:-]+$/.test(r));
+  let html = '<table><thead><tr>';
+  headers.forEach(h => { html += `<th>${h}</th>`; });
+  html += '</tr></thead><tbody>';
+  body.forEach(row => {
+    const cells = row.split('|').map(c=>c.trim()).filter(Boolean);
+    if (!cells.length) return;
+    html += '<tr>';
+    cells.forEach((c,i) => {
+      const cls = i===0?'kpi-label':c==='High'?'conf-high':c==='Medium'?'conf-med':c==='Low'?'conf-low':(c==='N/A'||c==='Not Reported')?'na-val':'';
+      html += `<td class="${cls}">${c}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => { alert('Copied!'); });
+}
+</script>
+</body>
+</html>
