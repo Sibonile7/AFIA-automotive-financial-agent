@@ -63,10 +63,12 @@ Rows must include:
 10. Market cap if share value would be 100 EUR per share (N/A if not available)
 
 Rules for the table:
-Keep all original values, currencies, and units exactly as extracted by Agent 1.
+Rules for the table:
+Copy each value exactly as Agent 1 extracted it. Do not swap a return on capital figure for Value Added or a profit margin. If Agent 1 gives RoCE, RONA, or RoI, keep it.
 Keep the confidence ratings from Agent 1.
 Use "Not Reported" where quarterly data is absent.
 Use "N/A" where data does not apply to a company.
+Show all money values in millions of euros as plain numbers (for example 133,453), except market cap which is in billions (for example 61.6 billion). Convert German Mio. and Mrd. into the same English units.
 
 SECTION 2: KPI Mapping Notes
 Write a short text summary organized by company explaining which data output has been replaced by a similar KPI and why. Include the original term used by the company in parentheses. This section must make it clear to a reader which metrics are directly comparable across companies and which are approximate equivalents.
