@@ -2,8 +2,7 @@
 
 A two agent system that reads automotive OEM financial reports, extracts key financial numbers, maps the different terms each company uses, and produces one executive summary table with cross company analysis.
 
-Built by **Sibonile Mthunzi** for the Magna Global AI Internship assignment (R00242813).
-
+Built by **Sibonile Mthunzi** 
 ## What it does
 
 AFIA reads the PDF financial reports of three automotive OEMs (BMW, Mercedes-Benz, Volkswagen) and pulls out 10 standard KPIs:
